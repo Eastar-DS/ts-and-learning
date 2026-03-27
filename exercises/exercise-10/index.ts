@@ -77,18 +77,19 @@ export type ApiResponse<T> =
     };
 
 export function promisify<T>(
-  fn: (callback: (response: ApiResponse<T>) => void) => void) {
+  fn: (callback: (response: ApiResponse<T>) => void) => void,
+) {
   return () => {
     return new Promise<T>((resolve, reject) => {
-        fn((response => {
-            if (response.status === 'success') {
-                resolve(response.data);
-            } else {
-                reject(new Error(response.error));
-            }
-        }))
+      fn((response) => {
+        if (response.status === 'success') {
+          resolve(response.data);
+        } else {
+          reject(new Error(response.error));
+        }
+      });
     });
-  }
+  };
 }
 
 const oldApi = {
@@ -120,14 +121,29 @@ const oldApi = {
   },
 };
 
-export const api = {
-  requestAdmins: promisify(oldApi.requestAdmins),
-  requestUsers: promisify(oldApi.requestUsers),
-  requestCurrentServerTime: promisify(oldApi.requestCurrentServerTime),
-  requestCoffeeMachineQueueLength: promisify(
-    oldApi.requestCoffeeMachineQueueLength,
-  ),
-};
+export function promisifyAll(
+  functions: Record<
+    string,
+    (callback: (response: ApiResponse<any>) => void) => void
+  >,
+) {
+  const result: Record<string, () => Promise<any>> = {};
+  Object.entries(functions).forEach(([name, func]) => {
+    result[name] = promisify(func);
+  });
+  return result;
+}
+
+export const api = promisifyAll(oldApi);
+
+// export const api = {
+//   requestAdmins: promisify(oldApi.requestAdmins),
+//   requestUsers: promisify(oldApi.requestUsers),
+//   requestCurrentServerTime: promisify(oldApi.requestCurrentServerTime),
+//   requestCoffeeMachineQueueLength: promisify(
+//     oldApi.requestCoffeeMachineQueueLength,
+//   ),
+// };
 
 function logPerson(person: Person) {
   console.log(
